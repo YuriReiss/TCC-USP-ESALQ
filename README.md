@@ -29,7 +29,7 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 
 ## Tecnologias Utilizadas
 
-* **Linguagem:** Python 3.12+
+* **Linguagem:** Python 3.14+
 * **Orquestração de Agentes:** LangChain
 * **Protocolo de Integração:** MCP SDK (Python)
 * **Ciência de Dados & Finanças:** `pandas`, `numpy`, `PyPortfolioOpt`, `yfinance`

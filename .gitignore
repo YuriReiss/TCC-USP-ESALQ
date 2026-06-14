@@ -1,0 +1,86 @@
+# ==========================================
+# Ambientes Virtuais (Virtual Environments)
+# ==========================================
+venv/
+.venv/
+env/
+ENV/
+Chalice/.chalice/
+.python-version
+
+# ==========================================
+# Arquivos de Execução e Cache do Python
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==========================================
+# Dados e Datasets (Evita subir arquivos pesados para o GitHub)
+# ==========================================
+data/raw/*
+data/processed/*
+# Exceção para manter as pastas estruturadas no repositório usando .gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Bloqueio genérico para qualquer arquivo de dados esquecido na raiz ou notebooks
+*.csv
+*.xlsx
+*.parquet
+*.json
+*.sqlite
+*.db
+
+# ==========================================
+# Caches de Bibliotecas (yfinance, etc.)
+# ==========================================
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ==========================================
+# Jupyter Notebooks (Checkpoints temporários)
+# ==========================================
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+*.pydevproject
+
+# ==========================================
+# Segurança e Configurações Locais
+# ==========================================
+.env
+.env.local
+.env.*
+.secrets
+
+# ==========================================
+# Editores de Código e IDEs
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

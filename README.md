@@ -1,16 +1,12 @@
 # TCC-USP-ESALQ: Sistemas Multiagentes e Protocolo MCP na Otimização de Portfólios e Gestão de Risco na B3 
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange)
-![MBA](https://img.shields.io/badge/MBA-Data%20Science%20e%20Analytics-green)
-
 Este repositório contém o código-fonte e os experimentos do Trabalho de Conclusão de Curso (TCC) desenvolvido para o MBA em Data Science e Analytics da **USP/Esalq**.
 
 O projeto propõe uma arquitetura inovadora que une Inteligência Artificial Generativa e finanças quantitativas, utilizando **Sistemas Multiagentes** e o **Model Context Protocol (MCP)** para automatizar a otimização de portfólios de ativos da B3 e a gestão de risco.
 
 ---
 
-## 🎯 Objetivo do Projeto
+## Objetivo do Projeto
 
 O mercado de capitais brasileiro exige métodos analíticos avançados para lidar com sua acentuada volatilidade. Embora os *Large Language Models* (LLMs) sejam excelentes na interpretação de cenários, eles sofrem com alucinações em cálculos aritméticos rigorosos. 
 
@@ -18,7 +14,7 @@ O objetivo deste projeto é demonstrar que a dissociação estrutural entre a ca
 
 ---
 
-## 🏗️ Arquitetura e Fluxo Multiagente
+## Arquitetura e Fluxo Multiagente
 
 O sistema é construído **inteiramente em Python** e orquestra os seguintes componentes:
 
@@ -31,7 +27,7 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 * **Linguagem:** Python 3.12+
 * **Orquestração de Agentes:** LangChain
@@ -44,14 +40,14 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 ## 📂 Estrutura Sugerida do Repositório
 
 ```text
-📦 TCC-USP-ESALQ
- ┣ 📂 agents               # Definição dos agentes (Analista e Gestor)
- ┣ 📂 mcp_servers          # Servidores MCP contendo as ferramentas determinísticas
- ┃ ┣ 📜 data_fetcher.py    # Integração com APIs financeiras (yfinance, etc.)
- ┃ ┗ 📜 risk_metrics.py    # Cálculos de VaR, Sharpe, Markowitz (PyPortfolioOpt)
- ┣ 📂 data                 # Datasets históricos ou extrações temporárias
- ┣ 📂 notebooks            # Jupyter Notebooks para EDA e testes de backtesting
- ┣ 📜 main.py              # Ponto de entrada para execução do sistema
- ┣ 📜 requirements.txt     # Dependências do projeto
- ┣ 📜 .env.example         # Variáveis de ambiente (Chaves de API, etc.)
- ┗ 📜 README.md            # Documentação principal
+TCC-USP-ESALQ
+ ┣ agents               # Definição dos agentes (Analista e Gestor)
+ ┣ mcp_servers          # Servidores MCP contendo as ferramentas determinísticas
+ ┃ ┣ data_fetcher.py    # Integração com APIs financeiras (yfinance, etc.)
+ ┃ ┗ risk_metrics.py    # Cálculos de VaR, Sharpe, Markowitz (PyPortfolioOpt)
+ ┣ data                 # Datasets históricos ou extrações temporárias
+ ┣ notebooks            # Jupyter Notebooks para EDA e testes de backtesting
+ ┣ main.py              # Ponto de entrada para execução do sistema
+ ┣ requirements.txt     # Dependências do projeto
+ ┣ .env.example         # Variáveis de ambiente (Chaves de API, etc.)
+ ┗ README.md            # Documentação principal

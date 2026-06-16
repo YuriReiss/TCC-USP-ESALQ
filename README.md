@@ -1,6 +1,6 @@
 # TCC-USP-ESALQ: Sistemas Multiagentes e Protocolo MCP na Otimização de Portfólios e Gestão de Risco na B3 
 
-Este repositório contém o código-fonte e os experimentos do Trabalho de Conclusão de Curso (TCC) desenvolvido para o MBA em Data Science e Analytics da **USP/Esalq**.
+Este repositório contém o código-fonte e datasets do Trabalho de Conclusão de Curso (TCC) desenvolvido para o MBA em Data Science e Analytics da **USP/Esalq**.
 
 O projeto propõe uma arquitetura inovadora que une Inteligência Artificial Generativa e finanças quantitativas, utilizando **Sistemas Multiagentes** e o **Model Context Protocol (MCP)** para automatizar a otimização de portfólios de ativos da B3 e a gestão de risco.
 
@@ -21,7 +21,7 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 1. **Agente Analista:** Responsável pela triagem de ativos da B3, extração de fatores macroeconômicos e interpretação de fundamentos.
 2. **Agente Gestor de Risco:** Avalia restrições, analisa o cenário e define pesos para o portfólio.
 3. **Servidores MCP (Model Context Protocol):** Atuam como ferramentas (*tools*) determinísticas isoladas do LLM, executando:
-   - Coleta de dados via APIs públicas (Yahoo Finance / Alpha Vantage).
+   - Coleta de dados via APIs públicas (Yahoo Finance).
    - Otimização de portfólio (Teoria de Markowitz).
    - Cálculo de *Value at Risk* (VaR), Beta e Índice de Sharpe.
 
@@ -29,7 +29,7 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 
 ## Tecnologias Utilizadas
 
-* **Linguagem:** Python 3.14+
+* **Linguagem:** Python 3.12+
 * **Orquestração de Agentes:** LangChain
 * **Protocolo de Integração:** MCP SDK (Python)
 * **Ciência de Dados & Finanças:** `pandas`, `numpy`, `PyPortfolioOpt`, `yfinance`
@@ -42,6 +42,7 @@ O sistema é construído **inteiramente em Python** e orquestra os seguintes com
 ```text
 TCC-USP-ESALQ
  ┣ agents               # Definição dos agentes (Analista e Gestor)
+ ┣ images               # Gráficos gerados
  ┣ mcp_servers          # Servidores MCP contendo as ferramentas determinísticas
  ┃ ┣ data_fetcher.py    # Integração com APIs financeiras (yfinance, etc.)
  ┃ ┗ risk_metrics.py    # Cálculos de VaR, Sharpe, Markowitz (PyPortfolioOpt)

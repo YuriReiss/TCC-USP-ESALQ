@@ -34,17 +34,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# ==========================================
-# Dados e Datasets (Evita subir arquivos pesados para o GitHub)
-# ==========================================
-data/raw/*
-data/processed/*
-# Exceção para manter as pastas estruturadas no repositório usando .gitkeep
-!data/raw/.gitkeep
-!data/processed/.gitkeep
 
 # Bloqueio genérico para qualquer arquivo de dados esquecido na raiz ou notebooks
-*.csv
 *.xlsx
 *.parquet
 *.json

@@ -61,7 +61,7 @@ try:
         # 5. Salvar o arquivo CSV final para o projeto
         caminho_arquivo = '../data/raw/cotacoes_b3_historico.csv'
         dados_b3.to_csv(caminho_arquivo)
-        print(f"\n✅ Base de dados gerada com sucesso em: {caminho_arquivo}")
+        print(f"\nBase de dados gerada com sucesso em: {caminho_arquivo}")
         
         # 6. Plotar o gráfico de Resultados Preliminares
         dados_normalizados = (dados_b3 / dados_b3.iloc[0]) * 100

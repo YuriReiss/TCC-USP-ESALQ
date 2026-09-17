@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { marked } from 'marked'
 
 const router = useRouter()
 
@@ -36,6 +37,13 @@ const messages = ref<ChatMessage[]>([
   { id: 2, role: 'system', text: 'Aqui está a análise de mercado de hoje baseada nos dados recentes:', hasWidget: true }
 ])
 
+// --- FUNÇÃO DE RENDERIZAÇÃO DO MARKDOWN ---
+const renderizarMarkdown = (texto: string): string => {
+  if (!texto) return ''
+  // marked.parse converte a string markdown para HTML válido
+  return marked.parse(texto) as string
+}
+
 const scrollToBottom = async (): Promise<void> => {
   await nextTick()
   if (messagesContainer.value) {
@@ -60,7 +68,7 @@ const sendMessage = async (text: string = inputMessage.value): Promise<void> => 
   inputMessage.value = ''
   scrollToBottom()
 
-  // 2. Cria uma mensagem de "digitando..." temporária (opcional, mas melhora a UX)
+  // 2. Cria uma mensagem de "digitando..." temporária
   const loadingId = Date.now() + 1
   messages.value.push({
     id: loadingId,
@@ -134,7 +142,6 @@ onMounted(() => {
       </nav>
 
       <div class="sidebar-footer">
-        <!-- Adicionado evento de click para o logout -->
         <div class="user-profile" @click="logout" title="Clique para sair">
           <div class="user-avatar">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -165,7 +172,8 @@ onMounted(() => {
             </div>
             
             <div class="message-content">
-              <div class="bubble">{{ msg.text }}</div>
+              <!-- MODIFICAÇÃO: Inserção do v-html renderizando markdown -->
+              <div class="bubble" v-html="renderizarMarkdown(msg.text)"></div>
               
               <div v-if="msg.hasWidget" class="widget-card">
                 <div class="widget-chart-placeholder">
@@ -329,4 +337,12 @@ onMounted(() => {
 .bubble::selection, .bubble *::selection { background-color: #0f172a !important; color: #ffffff !important; }
 .action-pill.active, .action-pill.active:hover { background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; }
 .action-pill.active .svg-icon { color: #ffffff !important; }
+
+/* --- REGRAS PARA O MARKDOWN DENTRO DA BUBBLE --- */
+.bubble :deep(p) { margin-bottom: 0.5rem; }
+.bubble :deep(p:last-child) { margin-bottom: 0; }
+.bubble :deep(strong) { font-weight: bold; }
+.bubble :deep(ul) { margin-left: 1.5rem; margin-bottom: 0.5rem; }
+.bubble :deep(li) { margin-bottom: 0.25rem; }
+.bubble :deep(h3) { font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; }
 </style>

@@ -6,28 +6,33 @@ from pypfopt import risk_models
 from pypfopt import expected_returns
 
 class IndicadoresRiscoB3:
-    def __init__(self, caminho_csv: str = "../../data/raw/cotacoes_b3_historico.csv"):
+    def __init__(self, caminho_csv: str = "../data_server/cotacoes_b3_fechamentos.csv"):
         """
-        Classe responsável pelos cálculos matemáticos determinísticos do TCC.
+        Classe responsável pelos cálculos matemáticos determinísticos.
         Carrega a base histórica local gerada na etapa de ingestão.
         """
-        # Validação do caminho do arquivo CSV
+        # Validação do caminho do arquivo CSV apontando para a base multisetorial
         if not os.path.exists(caminho_csv):
-            caminho_csv = os.path.join(os.path.dirname(__file__), '../../data/raw/cotacoes_b3_historico.csv')
+            caminho_csv = os.path.join(os.path.dirname(__file__), "../data_server/cotacoes_b3_fechamentos.csv")
             
         if not os.path.exists(caminho_csv):
             raise FileNotFoundError(f"Arquivo histórico não encontrado no caminho: {caminho_csv}")
             
         self.df = pd.read_csv(caminho_csv, parse_dates=['Date']).set_index('Date')
         
-        # Separa o Benchmark (IBOVESPA) das Ações
+        # Define o Benchmark e os indicadores macroeconômicos que não são ações negociáveis
         self.benchmark_ticker = '^BVSP'
+        colunas_macro = ['^BVSP', 'USDBRL=X', 'IFIX.SA']
+        
+        # Isola o Benchmark para os cálculos de Beta
         if self.benchmark_ticker in self.df.columns:
-            self.df_acoes = self.df.drop(columns=[self.benchmark_ticker])
             self.df_bench = self.df[self.benchmark_ticker]
         else:
-            self.df_acoes = self.df
             self.df_bench = None
+            
+        # Filtra o DataFrame de ações para o Markowitz (remove câmbio e índices agregados)
+        colunas_remover = [col for col in colunas_macro if col in self.df.columns]
+        self.df_acoes = self.df.drop(columns=colunas_remover, errors='ignore')
 
     def calcular_beta(self, ticker: str) -> float:
         """Calcula o risco sistemático (Beta) de um ativo contra o IBOVESPA"""
@@ -115,8 +120,8 @@ if __name__ == "__main__":
     print(otimizacao)
     
     # 2. Teste Beta
-    # Pega o primeiro ativo disponível que não seja o benchmark para testar o Beta
-    ativo_teste = [col for col in motor.df_acoes.columns if col != '^BVSP'][0]
+    # Pega o primeiro ativo disponível que não seja um indicador macroeconômico
+    ativo_teste = motor.df_acoes.columns[0] if not motor.df_acoes.empty else None
     if ativo_teste:
         beta_ativo = motor.calcular_beta(ativo_teste)
         print(f"\n2. Coeficiente Beta do {ativo_teste}: {beta_ativo}")

@@ -2,86 +2,117 @@ import yfinance as yf
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-import requests
+import time
 
 # 1. Garantir que a pasta de destino existe
 os.makedirs('../data/raw', exist_ok=True)
 
-# Configura o cache de timezone local
-yf.set_tz_cache_location(os.path.join(os.getcwd(), '.cache'))
-
-# 2. Definir os ativos com o sufixo correto da B3 e o Benchmark
-tickers = ['PETR4.SA', 'VALE3.SA', 'ITUB4.SA', 'WEGE3.SA', 'ELET3.SA', '^BVSP'] 
+# 2. Definir os ativos ampliados e indicadores macroeconômicos
+tickers = [
+    'PETR4.SA', 'VALE3.SA', 'ITUB4.SA', 'WEGE3.SA', 
+    'BBAS3.SA', 'BBDC4.SA',                         
+    'LREN3.SA', 'ABEV3.SA',                         
+    'SBSP3.SA', 'CMIG4.SA',                         
+    'IFIX.SA',                                      
+    'USDBRL=X',                                     
+    '^BVSP'                                         
+]
 data_inicio = '2023-06-14'
 data_fim = '2026-06-01'
 
-print(f"Iniciando download em lote via Yahoo Finance ({data_inicio} a {data_fim})...")
+print(f"Iniciando extração sequencial ({data_inicio} a {data_fim})...")
 
-# 3. Criar a sessão HTTP protegida para evitar bloqueios
-session = requests.Session()
-session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-})
+dfs = []
+ativos_com_erro = []
 
-# 4. Executar o download em lote
-try:
-    df_raw = yf.download(
-        tickers, 
-        start=data_inicio, 
-        end=data_fim, 
-        progress=True, 
-        auto_adjust=True, 
-        session=session
-    )
-    
-    # Extrai a matriz de fechamentos
-    if isinstance(df_raw.columns, pd.MultiIndex):
-        dados_b3 = df_raw['Close']
-    else:
-        dados_b3 = df_raw
-
-    # PASSO CRÍTICO: Remove primeiro as COLUNAS que falharam 100% (ex: ELET3.SA se vier toda NaN)
-    colunas_antes = set(dados_b3.columns)
-    dados_b3 = dados_b3.dropna(axis=1, how='all')
-    colunas_depois = set(dados_b3.columns)
-    
-    colunas_removidas = colunas_antes - colunas_depois
-    if colunas_removidas:
-        print(f"\nAtenção: Os seguintes ativos falharam e foram descartados da análise: {list(colunas_removidas)}")
-
-    # Agora sim, remove linhas com dados faltantes (feriados) nos ativos que restaram com sucesso
-    dados_b3 = dados_b3.dropna()
-    
-    if not dados_b3.empty:
-        print("\nPrimeiras linhas da tabela final alinhada:")
-        print(dados_b3.head())
+# 3. Executar o download sequencial sem sessão estática (Anti-Bloqueio)
+for ticker in tickers:
+    try:
+        df_temp = yf.download(
+            ticker, 
+            start=data_inicio, 
+            end=data_fim, 
+            progress=False, 
+            auto_adjust=True
+        )
         
-        # 5. Salvar o arquivo CSV final para o projeto
-        caminho_arquivo = '../data/raw/cotacoes_b3_historico.csv'
-        dados_b3.to_csv(caminho_arquivo)
-        print(f"\nBase de dados gerada com sucesso em: {caminho_arquivo}")
+        # Teste simplificado: verifica apenas se o DataFrame não está vazio
+        if not df_temp.empty and len(df_temp) > 0:
+            
+            # Verifica se o yfinance já retornou um MultiIndex nativo. 
+            # Se não, nós o criamos. Isso evita empilhar MultiIndex duplicados.
+            if not isinstance(df_temp.columns, pd.MultiIndex):
+                df_temp.columns = pd.MultiIndex.from_product([df_temp.columns, [ticker]])
+            else:
+                # Se já for MultiIndex, garante que o nome do ticker esteja no nível correto
+                if ticker not in df_temp.columns.get_level_values(1):
+                    df_temp.columns = pd.MultiIndex.from_product([df_temp.columns.get_level_values(0).unique(), [ticker]])
+
+            dfs.append(df_temp)
+            print(f"[OK] {ticker} baixado com sucesso.")
+        else:
+            print(f"[Falha] {ticker} retornou vazio e será ignorado.")
+            ativos_com_erro.append(ticker)
+            
+    except Exception as e:
+        print(f"[Erro] Falha ao extrair {ticker}: {e}")
+        ativos_com_erro.append(ticker)
         
-        # 6. Plotar o gráfico de Resultados Preliminares
-        dados_normalizados = (dados_b3 / dados_b3.iloc[0]) * 100
+    # Pausa de 3 segundos entre requisições para evitar rate limit
+    time.sleep(3)
+
+# 4. Tratamento de Dados e Limpeza
+if dfs:
+    # Concatena todos os ativos extraídos
+    df_raw = pd.concat(dfs, axis=1)
+    
+    # Isola temporariamente os fechamentos para checar se algum ativo veio majoritariamente nulo
+    fechamentos = df_raw['Close']
+    fechamentos_limpos = fechamentos.dropna(axis=1, how='all')
+    ativos_validos = fechamentos_limpos.columns
+    
+    # Filtra o DataFrame original tridimensional apenas para os ativos que passaram no teste
+    df_b3 = df_raw.loc[:, (slice(None), ativos_validos)]
+    
+    # Alinhamento de Feriados (B3 vs USD): 
+    # Propaga o último preço válido (forward fill), depois remove os NaNs residuais no início da série
+    df_b3 = df_b3.ffill().dropna()
+
+    if not df_b3.empty:
+        print("\nPrimeiras linhas da matriz de Fechamento (Close):")
+        print(df_b3['Close'].head())
         
-        plt.figure(figsize=(12, 6))
+        # 5. Salvar arquivos
+        caminho_parquet = '../data/raw/cotacoes_b3_multidimensional.parquet'
+        df_b3.to_parquet(caminho_parquet)
+        print(f"\nBase tridimensional gerada em: {caminho_parquet}")
+        
+        caminho_csv = '../data/raw/cotacoes_b3_fechamentos.csv'
+        df_b3['Close'].to_csv(caminho_csv)
+        print(f"Base de fechamentos gerada em: {caminho_csv}")
+        
+        # 6. Plotar o gráfico atualizado de Resultados Preliminares
+        # Normalização na Base 100
+        dados_normalizados = (df_b3['Close'] / df_b3['Close'].iloc[0]) * 100
+        
+        plt.figure(figsize=(14, 7))
         for coluna in dados_normalizados.columns:
             if coluna == '^BVSP':
                 plt.plot(dados_normalizados.index, dados_normalizados[coluna], label='IBOVESPA (Benchmark)', linewidth=3, color='black')
+            elif coluna == 'USDBRL=X':
+                plt.plot(dados_normalizados.index, dados_normalizados[coluna], label='Dólar (USDBRL)', linewidth=2, linestyle='--', color='green')
             else:
-                plt.plot(dados_normalizados.index, dados_normalizados[coluna], label=coluna, alpha=0.7)
+                plt.plot(dados_normalizados.index, dados_normalizados[coluna], label=coluna, alpha=0.4)
                 
-        plt.title('Resultados Preliminares: Evolução Ajustada dos Ativos vs IBOVESPA (Base 100)')
+        plt.title('Evolução Ajustada: Ativos Multisetoriais, IBOVESPA e Câmbio (Base 100)')
         plt.xlabel('Data')
         plt.ylabel('Crescimento Acumulado (%)')
-        plt.legend()
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
         plt.show()
         
     else:
-        print("\nErro: O alinhamento resultou em uma tabela sem nenhuma linha válida.")
-        
-except Exception as e:
-    print(f"\nErro crítico durante o download: {e}")
+        print("\nErro: A tabela ficou vazia após o alinhamento de feriados e remoção de valores nulos.")
+else:
+    print("\nErro crítico: Nenhum dado pôde ser processado.")

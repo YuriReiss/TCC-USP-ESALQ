@@ -1,29 +1,71 @@
+import json
+import pandas as pd
 from mcp.server.mcpserver import MCPServer
 from calculators import IndicadoresRiscoB3
-import json
+from feature import EngenhariaDeFeatures
 
-# Inicializa o servidor usando a classe atualizada
 mcp = MCPServer("RiskServer")
-motor = IndicadoresRiscoB3()
+
+# Variável global de estado para guardar o mapeamento da janela atual na memória do servidor
+MEMORIA_GABARITO = {}
 
 @mcp.tool()
-def otimizar_carteira_markowitz() -> str:
-    """Otimiza a carteira usando a Teoria Moderna de Portfólios."""
+def gerar_contexto_janela_atual(data_limite: str) -> str:
+    global MEMORIA_GABARITO
+    try:
+        df_completo = pd.read_csv('../data_server/cotacoes_b3_fechamentos.csv', parse_dates=['Date']).set_index('Date')
+        df_completo = df_completo.sort_index()
+        
+        df_historia_permitida = df_completo.loc[:data_limite]
+        df_janela = df_historia_permitida.iloc[-252:] 
+        
+        if len(df_janela) < 21:
+             return json.dumps({"status": "erro", "mensagem": f"Histórico insuficiente até a data {data_limite}."})
+        
+        engenharia = EngenhariaDeFeatures(df_janela)
+        contexto_completo = engenharia.gerar_contexto_llm()
+        
+        # Salva o gabarito na memória e retira-o do dicionário antes de enviar para o Node/LLM
+        MEMORIA_GABARITO = contexto_completo.pop("gabarito_ativos", {})
+        
+        # Retorna apenas cenário macro e as features anonimizadas ("Ativo_1", "Ativo_2")
+        return json.dumps(contexto_completo)
+    except Exception as e:
+        return json.dumps({"status": "erro", "mensagem": str(e)})
+
+@mcp.tool()
+def otimizar_markowitz_selecao(ativos: list) -> str:
+    global MEMORIA_GABARITO
+    motor = IndicadoresRiscoB3()
+    
+    # Desmascara os ativos: traduz ["Ativo_3", "Ativo_8"] de volta para ["ITUB4.SA", "VALE3.SA"]
+    ativos_reais = [MEMORIA_GABARITO[anonimo] for anonimo in ativos if anonimo in MEMORIA_GABARITO]
+    
+    ativos_validos = [ativo for ativo in ativos_reais if ativo in motor.df_acoes.columns]
+    
+    if not ativos_validos:
+        return json.dumps({"status": "erro", "mensagem": "Nenhum ativo correspondente na base de dados após tradução."})
+        
+    motor.df_acoes = motor.df_acoes[ativos_validos]
     resultado = motor.otimizar_carteira_markowitz()
+    
+    if resultado["status"] == "sucesso":
+        pesos = resultado["pesos_otimizados"]
+        var_projetado = motor.calcular_var_parametrico(pesos, patrimonio_total=100000)
+        beta_carteira = sum(motor.calcular_beta(ticker) * peso for ticker, peso in pesos.items())
+        
+        pacote_completo = {
+            "status": "sucesso",
+            "pesos_otimizados": pesos, # Retorna os tickers reais para o relatório final
+            "metricas_esperadas": resultado["metricas_esperadas"],
+            "risco_projetado": {
+                "var_diario_95": var_projetado,
+                "beta_carteira": round(beta_carteira, 4)
+            }
+        }
+        return json.dumps(pacote_completo)
+        
     return json.dumps(resultado)
 
-@mcp.tool()
-def calcular_beta_ativo(ticker: str) -> str:
-    """Calcula o risco sistemático (Beta) de um ativo contra o IBOVESPA."""
-    resultado = motor.calcular_beta(ticker)
-    return json.dumps({"ticker": ticker, "beta": resultado})
-
-@mcp.tool()
-def calcular_var(pesos: dict, patrimonio_total: float, confianca: float = 0.95) -> str:
-    """Calcula o Value at Risk (VaR) paramétrico diário."""
-    resultado = motor.calcular_var_parametrico(pesos, patrimonio_total, confianca)
-    return json.dumps({"var_financeiro": resultado})
-
 if __name__ == "__main__":
-    # Define o transporte para o novo padrão HTTP (Streamable HTTP)
     mcp.run(transport='streamable-http', host="0.0.0.0", port=8000)

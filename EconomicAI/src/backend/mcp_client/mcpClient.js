@@ -14,13 +14,7 @@ async function conectarMotorQuantitativo() {
     
     await mcpClient.connect(transport);
     console.log("✅ Conectado ao Servidor MCP de Risco via Streamable HTTP!");
-
-    const resultado = await mcpClient.callTool({
-      name: "otimizar_carteira_markowitz",
-      arguments: {}
-    });
-
-    console.log("Resultado bruto recebido via rede:", resultado.content[0].text);
+    
     return mcpClient;
   } catch (error) {
     console.error("❌ Erro ao conectar no MCP via HTTP:", error);

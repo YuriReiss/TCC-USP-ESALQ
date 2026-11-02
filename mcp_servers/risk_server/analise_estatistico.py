@@ -68,33 +68,60 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     print(f"Pior Cenário (VaR 95%): R$ {risco_ruina:.2f}")
     print("="*50)
     
-    # ================= Geração de Gráficos (Alta Resolução) =================
+# ================= Geração de Gráficos (Alta Resolução) =================
     plt.style.use('seaborn-v0_8-darkgrid')
     
-    # Gráfico 1: Curva de Capital (IA vs IBOV)
-    fig1, ax1 = plt.subplots(figsize=(12, 6))
-    ax1.plot(df['Data_Apuracao'], df['Capital_Estrategia'], label='Multiagente AI (Estratégia)', color='blue', linewidth=2)
-    ax1.plot(df['Data_Apuracao'], df['Capital_IBOV'], label='IBOVESPA (Benchmark)', color='orange', linewidth=2, linestyle='--')
-    ax1.set_title('Evolução do Capital: Inteligência Artificial vs Mercado Passivo', fontsize=14)
-    ax1.set_ylabel('Capital Acumulado (R$)', fontsize=12)
-    ax1.legend()
+    # FIGURA 2: Curva de Capital
+    fig2, ax2 = plt.subplots(figsize=(12, 6))
+    ax2.plot(df['Data_Apuracao'], df['Capital_Estrategia'], label='Multiagente AI + Markowitz', color='blue', linewidth=2)
+    ax2.plot(df['Data_Apuracao'], df['Capital_IBOV'], label='IBOVESPA (Benchmark)', color='orange', linewidth=2, linestyle='--')
+    ax2.set_title('Evolução do Capital: Estratégia vs Mercado Passivo', fontsize=14)
+    ax2.set_ylabel('Capital Acumulado (R$)', fontsize=12)
+    ax2.legend()
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig('grafico_curva_capital.png', dpi=300)
+    plt.savefig('figura2_curva_capital.png', dpi=300)
+
+    # FIGURA 3: Risco (VaR e Beta) em Subplots
+    fig3, (ax3a, ax3b) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
     
-    # Gráfico 2: Simulação de Monte Carlo
-    fig2, ax2 = plt.subplots(figsize=(12, 6))
-    ax2.plot(caminhos_capital[:, :100], color='gray', alpha=0.1) # Plota apenas 100 para não pesar o render
-    ax2.plot(caminhos_capital.mean(axis=1), color='red', linewidth=2, label='Trajetória Média (Esperança Matemática)')
-    ax2.plot(np.percentile(caminhos_capital, 5, axis=1), color='blue', linewidth=2, linestyle='--', label='VaR 95% (Cenário Pessimista)')
-    ax2.set_title('Simulação de Monte Carlo: Robustez a Longo Prazo', fontsize=14)
-    ax2.set_ylabel('Capital Simulado (R$)', fontsize=12)
-    ax2.set_xlabel('Janelas de Rebalanceamento (21 dias)', fontsize=12)
-    ax2.legend()
+    # Subplot VaR
+    ax3a.bar(df['Data_Apuracao'], df['VaR_95'], color='darkred', alpha=0.7)
+    ax3a.set_title('Monitoramento de Risco (Rebalanceamentos a cada 21 dias)', fontsize=14)
+    ax3a.set_ylabel('Value at Risk (95%) em R$', fontsize=11)
+    
+    # Subplot Beta
+    ax3b.plot(df['Data_Apuracao'], df['Beta'], color='purple', marker='o', linewidth=2)
+    ax3b.axhline(y=1.0, color='gray', linestyle='--', label='Risco de Mercado (Beta = 1)')
+    ax3b.set_ylabel('Coeficiente Beta da Carteira', fontsize=11)
+    ax3b.legend()
+    plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig('grafico_monte_carlo.png', dpi=300)
+    plt.savefig('figura3_var_beta.png', dpi=300)
+
+    # FIGURA 4: Underwater Plot (Drawdown)
+    fig4, ax4 = plt.subplots(figsize=(12, 5))
+    ax4.fill_between(df['Data_Apuracao'], df['Drawdown_Estrategia'] * 100, 0, color='red', alpha=0.4)
+    ax4.plot(df['Data_Apuracao'], df['Drawdown_Estrategia'] * 100, color='darkred', linewidth=1)
+    ax4.set_title('Underwater Plot: Maximum Drawdown da Estratégia', fontsize=14)
+    ax4.set_ylabel('Queda em Relação ao Topo (%)', fontsize=12)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig('figura4_drawdown.png', dpi=300)
+
+    # FIGURA 5: Simulação de Monte Carlo
+    fig5, ax5 = plt.subplots(figsize=(12, 6))
+    ax5.plot(caminhos_capital[:, :100], color='gray', alpha=0.1)
+    ax5.plot(caminhos_capital.mean(axis=1), color='red', linewidth=2, label='Trajetória Média Esperada')
+    ax5.plot(np.percentile(caminhos_capital, 5, axis=1), color='blue', linewidth=2, linestyle='--', label='VaR 95% (Cenário Pessimista)')
+    ax5.set_title('Simulação de Monte Carlo: Robustez a Longo Prazo (10.000 Trajetórias)', fontsize=14)
+    ax5.set_ylabel('Capital Simulado (R$)', fontsize=12)
+    ax5.set_xlabel('Janelas de Rebalanceamento', fontsize=12)
+    ax5.legend()
+    plt.tight_layout()
+    plt.savefig('figura5_monte_carlo.png', dpi=300)
     
-    print("\nGráficos 'grafico_curva_capital.png' e 'grafico_monte_carlo.png' salvos com sucesso na pasta atual!")
+    print("\nAs Figuras 2, 3, 4 e 5 foram geradas e guardadas na pasta atual!")
 
 if __name__ == "__main__":
     executar_analise_completa()

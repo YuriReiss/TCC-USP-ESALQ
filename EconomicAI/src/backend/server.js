@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Registra o grupo de rotas de autenticação sob o prefixo /api/auth
 app.use('/api/auth', authRoutes);
-app.use('/api/ai', aiRoutes);
+app.use('/api', aiRoutes);
 
 app.listen(3000, () => {
   console.log('API rodando em http://localhost:3000');

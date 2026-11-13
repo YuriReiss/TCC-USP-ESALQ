@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 
+from estilo_figuras import aplicar
+
 CAMINHO_CDI = '../data_server/cdi_diario.csv'
 
 
@@ -97,7 +99,7 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     print("="*50)
     
 # ================= Geração de Gráficos (Alta Resolução) =================
-    plt.style.use('seaborn-v0_8-darkgrid')
+    aplicar()
     
     # FIGURA 2: Curva de Capital
     fig2, ax2 = plt.subplots(figsize=(12, 6))
@@ -142,9 +144,12 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     ax5.plot(caminhos_capital[:, :100], color='gray', alpha=0.1)
     ax5.plot(caminhos_capital.mean(axis=1), color='red', linewidth=2, label='Trajetória Média Esperada')
     ax5.plot(np.percentile(caminhos_capital, 5, axis=1), color='blue', linewidth=2, linestyle='--', label='VaR 95% (Cenário Pessimista)')
-    ax5.set_title('Simulação de Monte Carlo: Robustez a Longo Prazo (10.000 Trajetórias)', fontsize=14)
-    ax5.set_ylabel('Capital Simulado (R$)', fontsize=12)
-    ax5.set_xlabel('Janelas de Rebalanceamento', fontsize=12)
+    ax5.set_title('Simulação de Monte Carlo: robustez a longo prazo (10.000 trajetórias)', fontsize=13, loc='left')
+    ax5.set_ylabel('Capital simulado (R$)', fontsize=12)
+    ax5.set_xlabel('Janelas de rebalanceamento', fontsize=12)
+    # A notação científica do eixo ("1e7") é ilegível num texto em reais.
+    ax5.yaxis.set_major_formatter(
+        plt.FuncFormatter(lambda v, _: f'{v:,.0f}'.replace(',', '.')))
     ax5.legend()
     plt.tight_layout()
     plt.savefig('figura5_monte_carlo.png', dpi=300)

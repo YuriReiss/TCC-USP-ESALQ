@@ -1,0 +1,2 @@
+par,janelas_comuns,so_em_a,so_em_b,jaccard_medio,jaccard_mediano,cestas_identicas,pct_identicas,total_a,total_b,cagr_a,cagr_b
+backtest_economicAI_KMEANS_EXPANSIVO vs replica_1,168,0,0,0.9512896825396825,1.0,148,88.0952380952381,18.715135387211774,15.6467930993111,0.2373304403579315,0.22246912336608915

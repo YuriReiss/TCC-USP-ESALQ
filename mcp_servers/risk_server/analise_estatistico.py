@@ -3,10 +3,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 
+CAMINHO_CDI = '../data_server/cdi_diario.csv'
+
+
+def taxa_livre_risco_por_janela(df: pd.DataFrame) -> pd.Series:
+    """
+    CDI efetivo capitalizado dentro de cada janela de apuração.
+
+    Substitui a premissa anterior de Selic fixa em 10,5% a.a. para todo o período. Num
+    estudo que cobre 2012 a 2026 a taxa constante distorce o Sharpe nas duas pontas: o
+    CDI acumulou 2,76% em 2020 e 14,32% em 2025. Com taxa fixa, o excesso de retorno
+    ficava subestimado nos anos de juro baixo e superestimado nos de juro alto.
+    """
+    cdi = pd.read_csv(CAMINHO_CDI, parse_dates=['Date']).set_index('Date').CDI_Dia.sort_index()
+    inicio = pd.to_datetime(df['Data_Rebalanceamento'])
+    fim = pd.to_datetime(df['Data_Apuracao'])
+    # iloc[1:] exclui o dia do rebalanceamento: o capital só rende a partir do dia seguinte.
+    return pd.Series([(1 + cdi.loc[i:f].iloc[1:]).prod() - 1 for i, f in zip(inicio, fim)],
+                     index=df.index)
+
+
 def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', capital_inicial=100000.0, simulacoes_mc=10000):
     print("Carregando resultados do backtest...")
     df = pd.read_csv(caminho_csv)
-    
+
     # 1. Preparação dos Retornos e Curva de Capital
     df['Retorno_Carteira'] = df['Retorno_Carteira'].astype(float)
     df['Retorno_IBOV'] = df['Retorno_IBOV'].astype(float)
@@ -20,10 +40,11 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     df['Drawdown_Estrategia'] = (df['Capital_Estrategia'] / df['Pico_Estrategia']) - 1
     max_dd = df['Drawdown_Estrategia'].min()
     
-    # 3. Índice de Sharpe (Assumindo Selic média de ~10.5% ao ano -> ~0.83% ao mês/janela)
-    taxa_livre_risco_janela = 0.0083 
+    # 3. Índice de Sharpe com CDI efetivo de cada janela
+    taxa_livre_risco_janela = taxa_livre_risco_por_janela(df)
     excesso_retorno = df['Retorno_Carteira'] - taxa_livre_risco_janela
-    sharpe_ratio = (excesso_retorno.mean() / df['Retorno_Carteira'].std()) * np.sqrt(12) # Anualizado (aprox 12 janelas de 21 dias/ano)
+    janelas_por_ano = 252 / 21
+    sharpe_ratio = (excesso_retorno.mean() / df['Retorno_Carteira'].std()) * np.sqrt(janelas_por_ano)
     
     # 4. Teste T de Student Pareado (Estratégia vs IBOVESPA)
     # Hipótese Nula (H0): Não há diferença significativa entre a média de retornos da IA e do IBOV
@@ -35,8 +56,9 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     sigma = df['Retorno_Carteira'].std()
     passos = len(df)
     
-    # Gera matriz de retornos aleatórios baseados na distribuição normal da carteira
-    retornos_aleatorios = np.random.normal(mu, sigma, (passos, simulacoes_mc))
+    # Semente fixa: sem ela os números de Monte Carlo citados no trabalho não são reproduzíveis.
+    rng = np.random.default_rng(42)
+    retornos_aleatorios = rng.normal(mu, sigma, (passos, simulacoes_mc))
     
     # Calcula os caminhos de capital
     caminhos_capital = capital_inicial * np.ones((passos + 1, simulacoes_mc))
@@ -53,13 +75,19 @@ def executar_analise_completa(caminho_csv='resultado_backtest_economicAI.csv', c
     print(f"Retorno Total Carteira: {((df['Capital_Estrategia'].iloc[-1] / capital_inicial) - 1)*100:.2f}%")
     print(f"Retorno Total IBOV:     {((df['Capital_IBOV'].iloc[-1] / capital_inicial) - 1)*100:.2f}%")
     print(f"Maximum Drawdown:       {max_dd*100:.2f}%")
-    print(f"Índice de Sharpe:       {sharpe_ratio:.2f}")
+    print(f"Índice de Sharpe:       {sharpe_ratio:.2f}  "
+          f"(CDI médio no período: {taxa_livre_risco_janela.mean()*janelas_por_ano*100:.2f}% a.a.)")
     print("-"*50)
     print("TESTE DE HIPÓTESES (T-Student Pareado)")
     print(f"Estatística T:          {t_stat:.4f}")
     print(f"P-Value:                {p_value:.4f}")
+    # O teste compara a carteira com o IBOVESPA, então ele mede o efeito conjunto de
+    # universo, seleção e otimizador. Atribuir a diferença à IA exigiria a decomposição
+    # feita separadamente, que mostra o universo respondendo por quase todo o excesso.
     if p_value < 0.05:
-         print("-> Resultado: ESTATISTICAMENTE SIGNIFICANTE. A IA gera alpha comprovado.")
+         print("-> Resultado: diferença significante a 95% contra o IBOVESPA.")
+         print("   Atenção: o teste não isola a contribuição da IA; ver a decomposição")
+         print("   por universo, seleção e otimizador antes de falar em alpha.")
     else:
          print("-> Resultado: Não significante a 95% de confiança.")
     print("-"*50)

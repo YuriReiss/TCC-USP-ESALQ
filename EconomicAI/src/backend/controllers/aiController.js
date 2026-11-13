@@ -31,7 +31,7 @@ const gerarPortfolioOtimizado = async (req, res) => {
     }
 
     // 3. Repassamos o cliente já conectado para o serviço orquestrar
-    const resultadoFinal = await orquestrarPortfolio(contextoMacroMicro, mcpClientInstance);
+    const resultadoFinal = await orquestrarPortfolio(contextoMacroMicro, mcpClientInstance, data_referencia);
 
     res.status(200).json({
       sucesso: true,

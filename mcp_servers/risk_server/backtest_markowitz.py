@@ -28,9 +28,6 @@ def executar_backtest():
     JANELA_TREINO = 252  # ~1 ano de histórico para o Markowitz calcular o risco
     JANELA_TESTE = 21    # ~1 mês de manutenção da carteira antes do rebalanceamento
     
-    # Instancia o motor quantitativo
-    motor = IndicadoresRiscoB3(caminho_csv=caminho_csv)
-    
     retornos_portfolio_out_of_sample = []
     retornos_benchmark_out_of_sample = []
     datas_out_of_sample = []
@@ -51,9 +48,10 @@ def executar_backtest():
         retornos_teste_acoes = df_teste.drop(columns=['^BVSP', 'USDBRL=X', 'IFIX.SA'], errors='ignore').pct_change().dropna()
         retornos_teste_bench = df_teste['^BVSP'].pct_change().dropna()
         
-        # 4. Injeta os dados de treino no motor e otimiza
-        # Substituímos dinamicamente os dados dentro do motor para forçar o cálculo na janela específica
-        motor.df_acoes = df_treino.drop(columns=['^BVSP', 'USDBRL=X', 'IFIX.SA'], errors='ignore')
+        # 4. Restringe o motor à janela de treino e otimiza
+        motor = IndicadoresRiscoB3(caminho_csv=caminho_csv,
+                                   data_limite=df_treino.index[-1],
+                                   janela=JANELA_TREINO)
         otimizacao = motor.otimizar_carteira_markowitz()
         
         if otimizacao['status'] == 'sucesso':
@@ -114,7 +112,15 @@ def executar_backtest():
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.show()
+    # savefig em vez de show: o script roda sem travar esperando a janela fechar.
+    plt.savefig('figura_backtest_markowitz_vs_ibov.png', dpi=300)
+    print("Grafico salvo em figura_backtest_markowitz_vs_ibov.png")
+
+    # Série salva para o comparativo de três vias (hibrido x Markowitz x IBOV).
+    pd.DataFrame({'Retorno_Markowitz': serie_retornos_port,
+                  'Retorno_IBOV': serie_retornos_bench}).to_csv('resultado_backtest_markowitz.csv',
+                                                                index_label='Date')
+    print("Serie diaria salva em resultado_backtest_markowitz.csv")
 
 if __name__ == "__main__":
     executar_backtest()

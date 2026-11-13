@@ -1,8 +1,8 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from pypfopt import expected_returns, risk_models
 from pypfopt.efficient_frontier import EfficientFrontier
+from pypfopt.exceptions import OptimizationError
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -20,32 +20,35 @@ def executar_markowitz_isolado(caminho_cotacoes='../data_server/cotacoes_b3_fech
     df_acoes = df_cotacoes.drop(columns=[col for col in colunas_macro if col in df_cotacoes.columns], errors='ignore')
     
     retornos_markowitz = []
-    
+    janelas_em_fallback = 0
+
     print("A executar motor de Markowitz Puro (Controlo Estrito)...")
-    
+
     for index, row in df_resultados.iterrows():
         data_treino_fim = row['Data_Rebalanceamento']
         data_teste_fim = row['Data_Apuracao']
-        
+
         # 1. Janela de Treino (252 dias antes da data de rebalanceamento)
         df_treino = df_acoes.loc[:data_treino_fim].tail(252)
-        
+
         try:
             # 2. Matemática Pura de Markowitz (Sem filtro de IA)
+            # Estimadores idênticos aos de calculators.otimizar_carteira_markowitz: a única
+            # diferença entre este controlo e a estratégia híbrida deve ser o filtro dos LLMs.
             mu = expected_returns.mean_historical_return(df_treino)
-            S = risk_models.sample_cov(df_treino)
-            
+            S = risk_models.CovarianceShrinkage(df_treino).ledoit_wolf()
+
             ef = EfficientFrontier(mu, S)
-            # Adiciona pequeno regularizador para evitar que a matemática se perca com matrizes singulares
-            ef.add_objective(objective=lambda w: 0.01 * np.sum(w ** 2)) 
-            pesos_brutos = ef.max_sharpe()
+            ef.max_sharpe(risk_free_rate=0.0)
             pesos = ef.clean_weights()
-            
-        except Exception as e:
-            print(f"Erro matemático na janela {data_treino_fim}. A alocar em pesos iguais (1/N).")
+
+        except (OptimizationError, ValueError) as e:
+            # Fallback reservado a falhas numéricas reais; erros de programação devem propagar.
+            janelas_em_fallback += 1
+            print(f"Erro matemático na janela {data_treino_fim} ({e}). A alocar em pesos iguais (1/N).")
             n_ativos = len(df_treino.columns)
             pesos = {ativo: 1.0/n_ativos for ativo in df_treino.columns}
-            
+
         # 3. Apuração no mercado real (Janela de Teste)
         df_teste = df_acoes.loc[data_treino_fim:data_teste_fim]
         if len(df_teste) >= 2:
@@ -64,17 +67,19 @@ def executar_markowitz_isolado(caminho_cotacoes='../data_server/cotacoes_b3_fech
     # Salvar o CSV atualizado
     df_resultados.to_csv(caminho_resultados, index=False)
     
+    capital_ibov_final = (capital_inicial * (1 + df_resultados['Retorno_IBOV']).cumprod()).iloc[-1]
+
     rentabilidade_ia = ((df_resultados['Capital_Acumulado'].iloc[-1] / capital_inicial) - 1) * 100
     rentabilidade_mark = ((df_resultados['Capital_Markowitz'].iloc[-1] / capital_inicial) - 1) * 100
-    rentabilidade_ibov = ((df_resultados['Capital_IBOV'].iloc[-1] if 'Capital_IBOV' in df_resultados else 
-                          (capital_inicial * (1 + df_resultados['Retorno_IBOV']).cumprod()).iloc[-1] / capital_inicial) - 1) * 100
-    
+    rentabilidade_ibov = ((capital_ibov_final / capital_inicial) - 1) * 100
+
     print("\n" + "="*50)
     print("RESULTADOS DO TESTE DE CONTROLO")
     print("="*50)
     print(f"1. Estratégia Híbrida (IA + Markowitz): {rentabilidade_ia:.2f}%")
     print(f"2. Markowitz Isolado (Matemática Pura): {rentabilidade_mark:.2f}%")
     print(f"3. IBOVESPA (Benchmark Passivo):        {rentabilidade_ibov:.2f}%")
+    print(f"Janelas que recorreram ao fallback 1/N: {janelas_em_fallback} de {len(df_resultados)}")
     print("="*50)
 
     # ================= Geração da Figura 2 (Comparativo Triplo) =================

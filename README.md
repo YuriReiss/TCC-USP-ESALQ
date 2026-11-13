@@ -1,4 +1,4 @@
-# TCC-USP-ESALQ: Sistemas Multiagentes e Protocolo MCP na Otimização de Portfólios e Gestão de Risco na B3 
+# TCC-USP-ESALQ: Alocação de ativos e gestão de risco na B3 — multiagentes e modelagem matemática determinística
 
 Este repositório contém o código-fonte do Trabalho de Conclusão de Curso (TCC) desenvolvido para o MBA em Data Science e Analytics da **USP/Esalq**.
 
@@ -10,7 +10,9 @@ O projeto propõe uma arquitetura inovadora que une Inteligência Artificial Gen
 
 O mercado de capitais brasileiro exige métodos analíticos avançados para lidar com sua acentuada volatilidade. Embora os *Large Language Models* (LLMs) sejam excelentes na interpretação de cenários, eles sofrem com alucinações em cálculos aritméticos rigorosos. 
 
-O objetivo deste projeto é demonstrar que a dissociação estrutural entre a camada de raciocínio linguístico da IA e os módulos quantitativos viabiliza recomendações de investimento precisas. O sistema delega cálculos estatísticos determinísticos (como Fronteira de Markowitz, VaR, Índice de Sharpe e Clusterização) para um servidor MCP especializado, enquanto um orquestrador centraliza a lógica do agente autônomo, garantindo fidedignidade analítica.
+O objetivo é avaliar, em backtest walk-forward na B3, uma arquitetura que dissocia a camada de raciocínio linguístico da camada de cálculo. Os cálculos estatísticos determinísticos (Fronteira de Markowitz, VaR, Índice de Sharpe, clusterização de regime) ficam num servidor MCP especializado, e um orquestrador conduz a deliberação dos agentes. Essa separação permite medir separadamente a contribuição de cada camada — o que a avaliação de desempenho faz, decompondo o excesso de retorno em efeito do universo de ativos, efeito da seleção pelos agentes e efeito do otimizador.
+
+A pergunta central não é se o sistema "acerta", e sim **o que cada camada acrescenta**. A decomposição mostra que o ganho se concentra no universo e na gestão de risco (assimetria entre captura de alta e de baixa), não numa superioridade da seleção feita pelos LLMs — esta não é distinguível de ruído com o número de janelas disponível. Os limites do desenho (viés de sobrevivência na escolha do universo, poder estatístico, custos de transação e reprodutibilidade de um LLM comercial) são medidos explicitamente em vez de assumidos.
 
 ---
 

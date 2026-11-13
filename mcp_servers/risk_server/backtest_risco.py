@@ -13,8 +13,7 @@ def executar_backtest_risco():
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho_csv}")
         
     df_completo = pd.read_csv(caminho_csv, parse_dates=['Date']).set_index('Date')
-    motor = IndicadoresRiscoB3(caminho_csv=caminho_csv)
-    
+
     JANELA_TREINO = 252
     JANELA_TESTE = 21
     CAPITAL_INICIAL = 100000.0  # R$ 100.000,00 para simulação financeira
@@ -35,9 +34,11 @@ def executar_backtest_risco():
         df_treino = df_completo.iloc[inicio_teste - JANELA_TREINO : inicio_teste]
         df_teste = df_completo.iloc[inicio_teste : fim_teste]
         
-        # Injeta dados de treino no motor
-        motor.df_acoes = df_treino.drop(columns=['^BVSP', 'USDBRL=X', 'IFIX.SA'], errors='ignore')
-        
+        # Restringe o motor à janela de treino (ações e benchmark juntos, para o Beta não ver o futuro)
+        motor = IndicadoresRiscoB3(caminho_csv=caminho_csv,
+                                   data_limite=df_treino.index[-1],
+                                   janela=JANELA_TREINO)
+
         otimizacao = motor.otimizar_carteira_markowitz()
         
         if otimizacao['status'] == 'sucesso':
@@ -114,7 +115,9 @@ def executar_backtest_risco():
     ax2.grid(True, linestyle='--', alpha=0.5)
     
     plt.tight_layout()
-    plt.show()
+    # savefig em vez de show: o script roda sem travar esperando a janela fechar.
+    plt.savefig('figura_backtest_risco_var_beta.png', dpi=300)
+    print("Grafico salvo em figura_backtest_risco_var_beta.png")
 
 if __name__ == "__main__":
     executar_backtest_risco()

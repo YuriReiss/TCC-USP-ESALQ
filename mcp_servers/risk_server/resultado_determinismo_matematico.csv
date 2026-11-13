@@ -1,0 +1,14 @@
+teste,data,n,saidas_distintas,deterministico,residuo_float
+repetibilidade,2016-02-11,10,1,True,
+repetibilidade,2020-04-06,10,1,True,
+repetibilidade,2024-03-27,10,1,True,
+repetibilidade,2026-04-02,10,1,True,
+invariancia_ordem,2016-02-11,2,1,True,False
+invariancia_ordem,2020-04-06,1,1,True,False
+invariancia_ordem,2024-03-27,6,1,True,False
+invariancia_ordem,2026-04-02,13,1,True,False
+kmeans,2016-02-11,10,1,True,
+kmeans,2020-04-06,10,1,True,
+kmeans,2024-03-27,10,1,True,
+kmeans,2026-04-02,10,1,True,
+monte_carlo,serie completa,2,1,True,

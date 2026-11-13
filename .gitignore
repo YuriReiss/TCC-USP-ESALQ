@@ -43,6 +43,17 @@ node_modules/
 *.sqlite
 *.db
 
+# O bloqueio de *.json acima apanhava também o manifesto do Node, sem o qual ninguém
+# consegue reinstalar as dependências e reproduzir o backtest. Reprodutibilidade é
+# requisito do trabalho, então estes dois voltam.
+!package.json
+!package-lock.json
+
+# ==========================================
+# Logs de execução (ruído, não resultado)
+# ==========================================
+*.log
+
 # ==========================================
 # Caches de Bibliotecas (yfinance, etc.)
 # ==========================================

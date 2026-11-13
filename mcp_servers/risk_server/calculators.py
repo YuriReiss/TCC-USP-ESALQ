@@ -4,9 +4,11 @@ import numpy as np
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt import risk_models
 from pypfopt import expected_returns
+from pypfopt.exceptions import OptimizationError
 
 class IndicadoresRiscoB3:
-    def __init__(self, caminho_csv: str = "../data_server/cotacoes_b3_fechamentos.csv"):
+    def __init__(self, caminho_csv: str = "../data_server/cotacoes_b3_fechamentos.csv",
+                 data_limite: str = None, janela: int = None):
         """
         Classe responsável pelos cálculos matemáticos determinísticos.
         Carrega a base histórica local gerada na etapa de ingestão.
@@ -33,6 +35,30 @@ class IndicadoresRiscoB3:
         # Filtra o DataFrame de ações para o Markowitz (remove câmbio e índices agregados)
         colunas_remover = [col for col in colunas_macro if col in self.df.columns]
         self.df_acoes = self.df.drop(columns=colunas_remover, errors='ignore')
+
+        if data_limite is not None or janela is not None:
+            self.aplicar_janela(data_limite=data_limite, janela=janela)
+
+    def aplicar_janela(self, data_limite: str = None, janela: int = None, ativos: list = None):
+        """
+        Restringe o motor à janela de treino do Walk-Forward.
+        Ações e benchmark são fatiados juntos: se apenas um deles for cortado,
+        o Beta passa a comparar a janela de treino com o histórico completo.
+        """
+        if ativos is not None:
+            self.df_acoes = self.df_acoes[ativos]
+
+        if data_limite is not None:
+            self.df_acoes = self.df_acoes.loc[:data_limite]
+            if self.df_bench is not None:
+                self.df_bench = self.df_bench.loc[:data_limite]
+
+        if janela is not None:
+            self.df_acoes = self.df_acoes.tail(janela)
+            if self.df_bench is not None:
+                self.df_bench = self.df_bench.tail(janela)
+
+        return self
 
     def calcular_beta(self, ticker: str) -> float:
         """Calcula o risco sistemático (Beta) de um ativo contra o IBOVESPA"""
@@ -81,7 +107,9 @@ class IndicadoresRiscoB3:
                     "indice_sharpe": float(round(sharpe_esp, 4))
                 }
             }
-        except Exception as e:
+        except (OptimizationError, ValueError) as e:
+            # Restrito a falhas numéricas: um except genérico aqui converteria erros
+            # de programação em "janela sem consenso", mascarando-os no backtest.
             return {"status": "erro", "mensagem": str(e)}
 
     def calcular_var_parametrico(self, pesos: dict, patrimonio_total: float, confianca: float = 0.95) -> float:
